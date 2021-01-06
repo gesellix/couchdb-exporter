@@ -45,6 +45,39 @@ type MembershipResponse struct {
 	ClusterNodes []string `json:"cluster_nodes"`
 }
 
+func (c *CouchdbClient) getHealthByNodeName(urisByNodeName map[string]string) (map[string]HealthResponse, error) {
+	healthByNodeName := make(map[string]HealthResponse)
+	for name, uri := range urisByNodeName {
+		var health HealthResponse
+
+		// Instead of http://localhost:15984/_node/couchdb@172.16.238.13/_up
+		// we have to request http://localhost:15984/_up,
+		// but how do we find the correct base uris, say: ip and port, for each node?
+		data, err := c.Request("GET", fmt.Sprintf("%s/_up", uri), nil)
+		if err != nil {
+			err = fmt.Errorf("error reading couchdb health: %v", err)
+			//if !strings.Contains(err.Error(), "\"error\":\"nodedown\"") {
+			//	return nil, err
+			//}
+			klog.Error(fmt.Errorf("continuing despite error: %v", err))
+			continue
+		}
+
+		err = json.Unmarshal(data, &health)
+		if err != nil {
+			return nil, fmt.Errorf("error unmarshalling health: %v", err)
+		}
+
+		healthByNodeName[name] = health
+	}
+
+	if len(urisByNodeName) == 0 {
+		return nil, fmt.Errorf("all nodes down")
+	}
+
+	return healthByNodeName, nil
+}
+
 func (c *CouchdbClient) getNodeInfo(uri string) (NodeInfo, error) {
 	data, err := c.Request("GET", fmt.Sprintf("%s/", uri), nil)
 	if err != nil {
@@ -188,6 +221,10 @@ func (c *CouchdbClient) getStats(config CollectorConfig) (Stats, error) {
 		if err != nil {
 			return Stats{}, err
 		}
+		//nodeHealth, err := c.getHealthByNodeName(urisByNode)
+		//if err != nil {
+		//	return Stats{}, err
+		//}
 		nodeStats, err := c.getStatsByNodeName(urisByNode)
 		if err != nil {
 			return Stats{}, err
@@ -220,6 +257,7 @@ func (c *CouchdbClient) getStats(config CollectorConfig) (Stats, error) {
 		}
 
 		return Stats{
+			//HealthByNodeName:      nodeHealth,
 			StatsByNodeName:       nodeStats,
 			DatabasesTotal:        len(databasesList),
 			DatabaseStatsByDbName: databaseStats,
