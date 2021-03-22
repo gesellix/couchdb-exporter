@@ -1,0 +1,11 @@
+groups:
+  - name: CouchDBAlerts
+    rules:
+      - alert: HighHTTPErrorRate
+        expr: sum by (node_name) (rate(couchdb_httpd_status_codes{code=~"5.."}[5m])) / sum  by (node_name) (rate(couchdb_httpd_requests[5m])) > 0.01
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: High error rate {{ printf "%.2f" $value }} in node {{ $labels.node_name }}
+          description: CouchDB node {{ $labels.node_name }} is responding to over 1% of requests as 5XX

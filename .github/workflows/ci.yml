@@ -19,6 +19,11 @@ jobs:
           ./integrationtest-setup.sh
           go test -v ./...
           ./integrationtest-teardown.sh
+      - name: Check mixin
+        run: |
+          go install github.com/monitoring-mixins/mixtool/cmd/mixtool
+          go install github.com/google/go-jsonnet/cmd/jsonnetfmt
+          cd couchdb-mixin && make lint build
       - name: Build
         run: go build -v ./...
 ...

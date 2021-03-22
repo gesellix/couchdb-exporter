@@ -12,3 +12,10 @@ go:
 before_script: ./integrationtest-setup.sh
 
 after_script: ./integrationtest-teardown.sh
+
+script:
+  - cd couchdb-mixin
+  - go install github.com/monitoring-mixins/mixtool/cmd/mixtool
+  - go install github.com/google/go-jsonnet/cmd/jsonnetfmt
+  - make lint build
+  - cd ..
